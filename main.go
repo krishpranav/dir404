@@ -76,3 +76,120 @@ func error(one error, msg string) {
 		return
 	}
 }
+
+// function to find the forbiden dir
+func ForbidFinder(domain string, wl string, nf bool, TimeOut int, OnlyOk bool, isItSingle bool) {
+
+	if isItSingle {
+		fmt.Println("			-[ YOUR TARGET : ", domain, " ]-\n\n")
+	}
+	timeout := time.Duration(TimeOut * 1000000)
+	tr := &http.Transport{
+		MaxIdleConns:        20,
+		MaxIdleConnsPerHost: 20,
+		IdleConnTimeout:     time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		DialContext: (&net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: time.Second,
+		}).DialContext,
+		ResponseHeaderTimeout: 30 * time.Second,
+	}
+
+	client := &http.Client{
+		Transport: tr,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Timeout: timeout,
+	}
+
+	///| IF STATMENT |\\\
+	Door := fmt.Sprintf("%s/%s/", domain, "DirDarWithRandomString")
+	reQ, err := client.Get(Door)
+	if err != nil {
+		return
+	}
+	if reQ.StatusCode == 403 {
+		return
+	}
+
+	if wl != "" {
+		ForbiddenList, err := os.Open(wl)
+		if err != nil {
+			finalErr := fmt.Sprintf("%s [%s]", "There was error opening this file!", wl)
+			err0r(err, finalErr)
+		}
+		defer ForbiddenList.Close()
+		ForbiDDen := bufio.NewScanner(ForbiddenList)
+		for ForbiDDen.Scan() {
+			WordList := ForbiDDen.Text()
+			FullUrl := fmt.Sprintf("%s/%s/", domain, WordList)
+			reQ, err := client.Get(FullUrl)
+			if err != nil {
+				return
+			}
+			defer reQ.Body.Close()
+			if reQ.StatusCode == 403 {
+				do3r(domain, WordList, TimeOut, OnlyOk)
+			} else if reQ.StatusCode == http.StatusOK {
+				bodyBytes, err := ioutil.ReadAll(reQ.Body)
+				if err != nil {
+					return
+				}
+				bodyString := string(bodyBytes)
+				Directory1StCase := "Index of /" + WordList
+				DirectorySecCase := "Directory /" + WordList
+				Directory3RdCase := "Directory listing for /" + WordList
+				if strings.Contains(bodyString, Directory1StCase) || strings.Contains(bodyString, DirectorySecCase) || strings.Contains(bodyString, Directory3RdCase) {
+					fmt.Println(White, "  [+] -", Green, " Directory listing ", White, "[", Cyan, FullUrl, White, "]", "Response code ", "[", reQ.StatusCode, "]")
+
+				}
+			} else {
+				if nf {
+					fmt.Println(Purple, "   [X] NOT FOUND : ", White, "[", Blue, FullUrl, White, "]", " With code -> ", "[", Red, reQ.StatusCode, White, "]")
+				} else {
+				}
+			}
+		}
+	} else {
+		ForbiddenList := []string{"admin", "test", "img", "inc", "includes", "include", "images", "pictures", "gallery", "css", "js", "asset", "assets", "backup", "static", "cms", "blog", "uploads", "files"}
+		for i := range ForbiddenList {
+			WordList := ForbiddenList[i]
+			FullUrl := fmt.Sprintf("%s/%s/", domain, WordList)
+			reQ, err := client.Get(FullUrl)
+			if err != nil {
+				return
+			}
+			defer reQ.Body.Close()
+			if reQ.StatusCode == 403 {
+				do3r(domain, WordList, TimeOut, OnlyOk)
+			} else if reQ.StatusCode == http.StatusOK {
+				bodyBytes, err := ioutil.ReadAll(reQ.Body)
+				if err != nil {
+					return
+				}
+				bodyString := string(bodyBytes)
+				Directory1StCase := "Index of /" + WordList
+				DirectorySecCase := "Directory /" + WordList
+				Directory3RdCase := " - " + WordList
+				if strings.Contains(bodyString, Directory1StCase) || strings.Contains(bodyString, DirectorySecCase) || strings.Contains(bodyString, Directory3RdCase) {
+					fmt.Println("\n", White, "	  [+] - ", Green, "Directory listing ", White, "[", Blue, FullUrl, White, "]", "Response code -> ", "[", Green, reQ.StatusCode, White, "]", "\n")
+
+				}
+			} else {
+				if nf {
+					fmt.Println(Purple, "   [X] NOT FOUND : ", White, "[", Blue, FullUrl, White, "]", " With code -> ", "[", Red, reQ.StatusCode, White, "]")
+				} else {
+
+				}
+			}
+
+		}
+
+	}
+
+	//wG2.Wait()
+	//	return true
+
+}

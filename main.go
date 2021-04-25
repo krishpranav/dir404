@@ -66,3 +66,13 @@ func screen() {
 		value()
 	}
 }
+
+// error handling function
+func error(one error, msg string) {
+	if one != nil {
+		screen()
+		fmt.Println("\n\n 				[x]- ", Red, msg, white, "\n\n")
+		os.Exit(0)
+		return
+	}
+}

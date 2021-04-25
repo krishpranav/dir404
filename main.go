@@ -16,10 +16,11 @@ import (
 	"time"
 )
 
-// setted as false to run the tool for running till getting the response
 var SingleScan = false
 
-// colors
+/*
+This colors code from -> https://github.com/ethicalhackingplayground/Zin/blob/master/zin.go
+*/
 var Reset = "\033[0m"
 var Red = "\033[31m"
 var Green = "\033[32m"
@@ -30,18 +31,17 @@ var Cyan = "\033[36m"
 var Gray = "\033[37m"
 var White = "\033[97m"
 var Dark = "\033[90m"
-var clear map[string]func()
+var clear map[string]func() //create a map for storing clear funcs
 
-// init function
 func init() {
-	clear = make(map[string]func()) // intialize it
+	clear = make(map[string]func()) //Initialize it
 	clear["linux"] = func() {
-		cmd := exec.Command("clear") // linux example
+		cmd := exec.Command("clear") //Linux example, its tested
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
 	clear["windows"] = func() {
-		cmd := exec.Command("cmd", "/c", "cls") // windows example
+		cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
@@ -59,25 +59,34 @@ func init() {
 	}
 }
 
-// clear the terminal screen
-func screen() {
-	value, ok := clear[runtime.GOOS]
-	if ok {
-		value()
+/////////////////////////////////////////////////////////
+
+////| Clear the terminal screen ...
+func scre3n() {
+	/////| This code from :-> https://stackoverflow.com/questions/22891644/how-can-i-clear-the-terminal-screen-in-go
+	value, ok := clear[runtime.GOOS] //runtime.GOOS -> linux, windows, darwin etc.
+	if ok {                          //if we defined a clear func for that platform:
+		value() //we execute it
+	} 
+	/* No need to exit the app if the tool cannot clear the screen :D 
+	else { //unsupported platform
+		
+		//panic("Your platform is unsupported! I can't clear terminal screen :(")
 	}
+	*/
 }
 
-// error handling function
-func error(one error, msg string) {
-	if one != nil {
-		screen()
-		fmt.Println("\n\n 				[x]- ", Red, msg, white, "\n\n")
+////| Error handling function ...
+func err0r(oNe error, msg string) {
+	if oNe != nil {
+		scre3n()
+		fmt.Println("\n\n		[x] - ", Red, msg, White, "\n\n")
 		os.Exit(0)
 		return
 	}
 }
 
-// function to find the forbiden dir
+///| This function is to find the forbidden directories .....
 func ForbidFinder(domain string, wl string, nf bool, TimeOut int, OnlyOk bool, isItSingle bool) {
 
 	if isItSingle {
@@ -291,28 +300,90 @@ func do3r(domain string, path string, TimeOut int, OnlyOk bool) {
 
 }
 
-// worker function
 func worker(domain chan string, wg *sync.WaitGroup, wl string, nf bool, TimeOut int, OnlyOk bool) {
 	defer wg.Done()
 	for b := range domain {
-		ForbidFinder(b, wl, nf, Timeout, OnlyOk, SingleScan)
+		ForbidFinder(b, wl, nf, TimeOut, OnlyOk, SingleScan)
 	}
 }
 
 func banner() {
-	screen()
+	scre3n()
 	const banner = `
-	dir404
+404DIR
 `
 	const about = `
-	Author : krishpranav
-		Twitter : @krishpranav5	`
-	var from = Red + "Ye" + White + "me" + Dark + "n"
-	fmt.Println(banner, about, from, Reset, "\n\n")
+	Author : Krishpranav
+		Twitter : @krishpranav5 `
+	fmt.Println(banner, about,Reset, "\n\n")
 
 }
-
-func help() {
+func h3lp() {
 	fmt.Println("\n", White, "	[-]", Red, "No input provided ", White, "(Run the tool again with --help flag for more information .)\n\n")
 	os.Exit(0)
+}
+func main() {
+	banner()
+	var wg sync.WaitGroup
+	DomainsList := make(chan string)
+
+	// request timeout
+	var TimeOut int
+	flag.IntVar(&TimeOut, "t", 10000, "Set the timeout of the requests (Millisecond)")
+	var con int
+	flag.IntVar(&con, "threads", 40, "Number of threads")
+	var wl string
+	flag.StringVar(&wl, "wl", "", "Forbidden directories WordList")
+
+	showErr := flag.Bool("err", false, "If you want to show errors!(Includes 404 errors) [True-False]")
+
+	//var OnlyOK string
+	//flag.StringVar(&OnlyOK, "only-ok", "", "Print out only OK (Bypassed and dir listing) ")
+	OnlyOK := flag.Bool("only-ok", false, "Print out only OK (Bypassed and dir listing) ")
+
+	// var OnlyBypass string
+	// flag.StringVar(&OnlyBypass, "to-bypass", "", "Use this option with sites list [If you already have forbidden dirs] e.x(-to-bypass Forbiddens.txt)")
+
+	var SingleSite string
+	flag.StringVar(&SingleSite, "single", "", "Only scan single target e.g (-single https://example.com/)")
+	flag.Parse()
+	// showErr = strings.ToLower(showErr)
+
+	if wl != "" {
+		ForbiddenList, err := os.Open(wl)
+
+		if err != nil {
+
+			finalErr := fmt.Sprintf("%s [%s]", "There was error opening this file!", wl)
+			err0r(err, finalErr)
+			_ = ForbiddenList
+		}
+	}
+	if SingleSite == "" {
+		for c := 0; c <= con; c++ {
+			wg.Add(1)
+			go worker(DomainsList, &wg, wl, *showErr, TimeOut, *OnlyOK)
+		}
+		sc := bufio.NewScanner(os.Stdin)
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeCharDevice) == 0 {
+			go func() {
+				for sc.Scan() {
+					texted := sc.Text()
+					DomainsList <- texted
+				}
+
+				close(DomainsList)
+			}()
+
+		} else {
+			h3lp()
+		}
+
+		wg.Wait()
+
+	} else {
+		ForbidFinder(SingleSite, wl, *showErr, TimeOut, *OnlyOK, true)
+	}
+
 }

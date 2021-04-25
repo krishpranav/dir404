@@ -290,3 +290,12 @@ func do3r(domain string, path string, TimeOut int, OnlyOk bool) {
 	}
 
 }
+
+// worker function
+func worker(domain chan string, wg *sync.WaitGroup, wl string, nf bool, TimeOut int, OnlyOk bool) {
+	defer wg.Done()
+	for b := range domain {
+		ForbidFinder(b, wl, nf, Timeout, OnlyOk, SingleScan)
+	}
+}
+

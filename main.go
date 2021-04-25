@@ -58,3 +58,11 @@ func init() {
 		White = ""
 	}
 }
+
+// clear the terminal screen
+func screen() {
+	value, ok := clear[runtime.GOOS]
+	if ok {
+		value()
+	}
+}

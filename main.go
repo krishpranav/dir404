@@ -299,3 +299,15 @@ func worker(domain chan string, wg *sync.WaitGroup, wl string, nf bool, TimeOut 
 	}
 }
 
+func banner() {
+	screen()
+	const banner = `
+	dir404
+`
+	const about = `
+	Author : krishpranav
+		Twitter : @krishpranav5	`
+	var from = Red + "Ye" + White + "me" + Dark + "n"
+	fmt.Println(banner, about, from, Reset, "\n\n")
+
+}

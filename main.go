@@ -311,3 +311,8 @@ func banner() {
 	fmt.Println(banner, about, from, Reset, "\n\n")
 
 }
+
+func help() {
+	fmt.Println("\n", White, "	[-]", Red, "No input provided ", White, "(Run the tool again with --help flag for more information .)\n\n")
+	os.Exit(0)
+}
